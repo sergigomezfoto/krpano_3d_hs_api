@@ -35,7 +35,7 @@ model Hotspot {
   name      String
   scene     Scene    @relation(fields: [sceneId], references: [id])
   sceneId   Int
-  data      Json     // contains: url?,position!,style?,extras?
+  data      Json     // contains: url?,position!(al codi prisma no pot assegurar un camp obligat al JSON?),style?,extras?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
