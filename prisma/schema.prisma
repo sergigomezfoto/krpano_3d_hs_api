@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tour {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  scenes    Scene[]
+  styles    Style[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+model Scene {
+  id        Int       @id @default(autoincrement())
+  name      String
+  tour      Tour      @relation(fields: [tourId], references: [id])
+  tourId    Int
+  hotspots  Hotspot[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tourId, name])
+}
+
+model Style {
+  id        Int      @id @default(autoincrement())
+  name      String
+  tour      Tour     @relation(fields: [tourId], references: [id])
+  tourId    Int
+  hotspots  Hotspot[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tourId, name])
+}
+
+model Hotspot {
+  id        Int      @id @default(autoincrement())
+  name      String
+  scene     Scene    @relation(fields: [sceneId], references: [id])
+  sceneId   Int
+  style     Style    @relation(fields: [styleId], references: [id])
+  styleId   Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+
+  @@unique([sceneId, name])
+}
