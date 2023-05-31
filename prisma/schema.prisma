@@ -31,13 +31,15 @@ model Scene {
 }
 
 model Hotspot {
-  id        Int      @id @default(autoincrement())
-  name      String
-  scene     Scene    @relation(fields: [sceneId], references: [id])
-  sceneId   Int
-  data      Json     // contains: url?,position!(al codi prisma no pot assegurar un camp obligat al JSON?),style?,extras?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  name        String
+  scene       Scene    @relation(fields: [sceneId], references: [id])
+  sceneId     Int
+  transform   Json     // tx, ty, tz, rx, ry, rz, scale
+  style       String?  // o style o extraData han d'estar omplerts però ho he de validar a la aplicació, no al model.
+  extraData   Json?    // o style o extraData han d'estar omplerts però ho he de validar a la aplicació, no al model.
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([sceneId, name])
 }

@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
-async function main() {
+
+
+const main = async () => {
 
   const createdTours = await prisma.tour.createMany({
     data: [
@@ -27,25 +29,36 @@ async function main() {
   console.log("records: ", scenes);
 
 
-  for (const scene of scenes) {   
+  for (const scene of scenes) {
     const numHotspots = Math.floor(Math.random() * 3) + 1; // 1-3(aleatori) hotspots 
-
+  
     for (let i = 0; i < numHotspots; i++) {
-      const hotspotName = `${scene.name}_hotspot_${i + 1}`;
+      const hotspotName = `hs_${i + 1}_${scene.name}`;
+      const tx = (Math.random() * 4000) - 2000;
+      const ty = (Math.random() * 4000) - 2000;
+      const tz = (Math.random() * 4000) - 2000;
+      const rx = Math.random() * 360;
+      const ry = Math.random() * 360;
+      const rz = Math.random() * 360;
+      const scale = Math.random() * 0.9 + 0.1;
       const createdHotspot = await prisma.hotspot.create({
         data: {
           name: hotspotName,
           sceneId: scene.id,
-          data: {
+          transform: { tx, ty, tz, rx, ry, rz, scale },
+          style: `hs_image|${hotspotName}`,
+          extraData: {
             url: "../assets/360_1.jpg",
-            position: [{ tx: 1, ty: 2, tz: 3 }, { rx: 1, ry: 2, rz: 3 }, { scale: 1 }],
-            style: `hs_image|${hotspotName}`,
-            extras: { blendmode: "add", alpha: "1" },
+            blendmode: "add", 
+            alpha: "1",
           },
         },
         select: { // select: retorna només els camps que especifiquem
           id: true,
           name: true,
+          transform: true,
+          style: true,
+          extraData: true,  
         },
       });
       console.log("Hotspot created: ", createdHotspot);
