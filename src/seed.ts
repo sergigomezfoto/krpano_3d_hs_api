@@ -7,8 +7,8 @@ const main = async () => {
 
   const createdTours = await prisma.tour.createMany({
     data: [
-      { name: "Tour 1" },
-      { name: "Tour 2" },
+      { name: "tour_1" },
+      { name: "tour_2" },
     ]
   });
   console.log("Tours created: ", createdTours);

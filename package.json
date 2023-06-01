@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-    
+
+    "dev": "nodemon src/server.ts"
+
   },
   "keywords": [],
   "author": "SERGI GOMEZ",
@@ -14,6 +15,7 @@
   "dependencies": {
     "@prisma/client": "^4.14.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.1.2",
     "express": "^4.18.2",
     "morgan": "^1.10.0"
   },
