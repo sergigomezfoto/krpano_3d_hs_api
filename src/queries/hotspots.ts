@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma-client.js";
 import { queryErrorHandler } from "../helpers/errorHandlers.js";
+import { isId } from "../helpers/isId.js";
 
 const apiRouter = Router();
 
@@ -32,47 +33,18 @@ apiRouter.get('/', queryErrorHandler(async (req, res) => {
     res.status(200).json({ ok: true, result });
 }));
 
-//GET totes els hotspots de las bbdd amb el mateix nom
-apiRouter.get('/name/:name', queryErrorHandler(async (req, res) => {
-    const { name } = req.params;
+// GET totes els hotspots de la BBDD per id o nom
+apiRouter.get('/:identifier', queryErrorHandler(async (req, res) => {
+    const { identifier } = req.params;
+    const queryIsId = isId(identifier); // és id?
+
     const result = await prisma.hotspot.findMany({
-        where: { name: name },
-        select: {
-            id: true,
-            name: true,
-            style : true,
-            transform:true,
-            extraData: true,
-            scene: {
-                select: {
-                    id: true,
-                    name: true,
-                    tour: {
-                        select: {
-                            id: true,
-                            name: true,
-                        }
-                    }
-                }
-            }
-        }
-    });
-    result.length === 0
-        ? res.status(404).json({ ok: false, message: `There are no hotspots with the name: ${name}.` })
-        : res.status(200).json({ ok: true, result });
-}));
-
-
-//GET escena per id
-apiRouter.get('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
-    const result = await prisma.hotspot.findUnique({
-        where: { id: Number(id) },
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
         select: {
             id: true,
             name: true,
             style: true,
-            transform:true,
+            transform: true,
             extraData: true,
             scene: {
                 select: {
@@ -89,11 +61,78 @@ apiRouter.get('/:id', queryErrorHandler(async (req, res) => {
         }
     });
 
-    result !== null
-        ? res.status(200).json({ ok: true, result })
-        : (() => { throw new Error(`Hotspot with id ${id} not found`); })();
-
+    if (result.length === 0) {
+        const errorMessage = queryIsId
+        ? `Hotspot with ID ${identifier} not found in the database.`
+        : `There are no hotspots in the database with the name: ${identifier}.`;
+  
+      throw new Error(errorMessage);
+    }
+    res.status(200).json({ ok: true, result });
 }));
+
+// //GET totes els hotspots de las bbdd amb el mateix nom
+// apiRouter.get('/name/:name', queryErrorHandler(async (req, res) => {
+//     const { name } = req.params;
+//     const result = await prisma.hotspot.findMany({
+//         where: { name: name },
+//         select: {
+//             id: true,
+//             name: true,
+//             style : true,
+//             transform:true,
+//             extraData: true,
+//             scene: {
+//                 select: {
+//                     id: true,
+//                     name: true,
+//                     tour: {
+//                         select: {
+//                             id: true,
+//                             name: true,
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     });
+//     result.length === 0
+//         ? res.status(404).json({ ok: false, message: `There are no hotspots with the name: ${name}.` })
+//         : res.status(200).json({ ok: true, result });
+// }));
+
+
+// //GET escena per id
+// apiRouter.get('/:id', queryErrorHandler(async (req, res) => {
+//     const { id } = req.params;
+//     const result = await prisma.hotspot.findUnique({
+//         where: { id: Number(id) },
+//         select: {
+//             id: true,
+//             name: true,
+//             style: true,
+//             transform:true,
+//             extraData: true,
+//             scene: {
+//                 select: {
+//                     id: true,
+//                     name: true,
+//                     tour: {
+//                         select: {
+//                             id: true,
+//                             name: true,
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     });
+
+//     result !== null
+//         ? res.status(200).json({ ok: true, result })
+//         : (() => { throw new Error(`Hotspot with id ${id} not found`); })();
+
+// }));
 
 
 // //GET totes les hotspots d'un tour per tour id

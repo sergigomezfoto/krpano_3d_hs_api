@@ -1,93 +1,78 @@
 import { Router } from "express";
 import { prisma } from "../prisma-client.js";
 import { queryErrorHandler } from "../helpers/errorHandlers.js";
+import { isId } from "../helpers/isId.js";
 
 const apiRouter = Router();
-
-
 //GET tots els tours
-apiRouter.get('/', queryErrorHandler(async (req, res) => {
+apiRouter.get('/_all_tours/:structure?', queryErrorHandler(async (req, res) => {
+    const { structure } = req.params;
+
     const result = await prisma.tour.findMany({
-        select: {
-            id: true,
-            name: true,
+        include: {
             scenes: {
-                select: {
-                    id: true,
-                    name: true,
-                    hotspots: {
-                        select: { id: true, name: true }
-                    }
-                },
-            },
-        },
-    });
-
-    res.status(200).json({ ok: true, result });
-}));
-
-
-//GET per id
-apiRouter.get('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
-    const result = await prisma.tour.findUnique({
-        where: { id: Number(id) },
-        select: {
-            id: true,
-            name: true,
-            scenes: {
-                select: {
-                    id: true,
-                    name: true,
-                    hotspots: {
-                        select: { id: true, name: true }
-                    }
+                include: {
+                    hotspots: true
                 }
             }
         }
     });
-    //en findUnique prisma decideix no llençar error si no troba res, per això cal fer la comprovació
-    result !== null
-        ? res.status(200).json({ ok: true, result })
-        : (() => { throw new Error(`Tour with id ${id} not found`); })();
 
+   if (structure === 'schema') {
+        const schemaResult = result.map(tour => ({
+            name: tour.name,
+            scenes: tour.scenes.map(scene => ({
+                [scene.name]: scene.hotspots.map(hotspot => hotspot.name)
+            }))
+        }));       
+        res.status(200).json({ ok: true, result: schemaResult });
+    }
+    else {
+        res.status(200).json({ ok: true, result });
+
+    }
 }));
 
-// GET per nom
-apiRouter.get('/name/:name', queryErrorHandler(async (req, res) => {
-    const { name } = req.params;
+
+
+
+//GET per id o per nom amb possible full structure = /fs
+apiRouter.get('/:identifier/:structure?', queryErrorHandler(async (req, res) => {
+    const { identifier, structure } = req.params;
+    const queryIsId = isId(identifier);
+
     const result = await prisma.tour.findUnique({
-        where: { name },
-        select: {
-            id: true, name: true, scenes: {
-                select: {
-                    id: true,
-                    name: true,
-                    hotspots: {
-                        select: { id: true, name: true }
-                    }
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
+        include: {
+            scenes: {
+                include: {
+                    hotspots: true
                 }
             }
         }
     });
-    //al findUnique prisma decideix no llençar error si no troba res, per això cal fer la comprovació
-    result !== null
-        ? res.status(200).json({ ok: true, result })
-        : (() => { throw new Error(`Tour with id ${name} not found`); })();
 
-
+    if (!result) {
+        const errorMessage = queryIsId
+            ? `No tour found with ID ${identifier}`
+            : `No tour found with name ${identifier}`;
+        throw new Error(errorMessage);
+    }
+    if (structure === 'schema') {
+        const schemaResult = {
+            name: result.name,
+            scenes: result.scenes.map(scene => ({
+                [scene.name]: scene.hotspots.map(hotspot => hotspot.name)
+            }))
+        };
+        res.status(200).json({ ok: true, result: schemaResult });
+    }
+    else {
+        res.status(200).json({ ok: true, result });
+    }
 }));
 
-// PUT per ID
-apiRouter.put('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
-    const uptdatedTour = await prisma.tour.update({
-        where: { id: Number(id) },
-        data: req.body,
-    });
-    //en update prisma decideix llençar error si no troba res, per això no cal fer la comprovació
-    res.status(200).json({ ok: true, uptdatedTour });
-}));
+
 
 //POST un tour
 apiRouter.post('/', queryErrorHandler(async (req, res) => {
@@ -95,11 +80,28 @@ apiRouter.post('/', queryErrorHandler(async (req, res) => {
     res.status(200).json({ ok: true, newTour });
 }));
 
-//DELETE per ID 
-apiRouter.delete('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
+// PUT per ID o Name
+apiRouter.put('/:identifier', queryErrorHandler(async (req, res) => {
+    const { identifier } = req.params;
+    const queryIsId = isId(identifier); // Comprovem si l'identificador és un id o un nom
+    const updatedTour = await prisma.tour.update({
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
+        data: req.body,
+    });
+
+    // Prisma decideix llençar un error a update si no es troba res, per això no cal fer la comprovació.
+    res.status(200).json({ ok: true, updatedTour });
+}));
+
+//DELETE by id or name
+
+apiRouter.delete('/:identifier', queryErrorHandler(async (req, res) => {
+    const { identifier } = req.params;
+    const queryIsId = isId(identifier);
+
+    //informo de les escenes i hotspots que s'ha carregat de pas
     const tour = await prisma.tour.findUnique({
-        where: { id: Number(id) },
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
         select: {
             name: true,
             scenes: {
@@ -110,19 +112,16 @@ apiRouter.delete('/:id', queryErrorHandler(async (req, res) => {
             },
         },
     });
-    const deletedTour = await prisma.tour.delete({
-        where: { id: Number(id) },
-    });
-
-    // Recuperar els noms de les escenes eliminades i els seus hotspots relacionats
     const deletedScenesAndHotspots = tour.scenes.map(scene => ({
         name: scene.name,
         deletedHotspots: scene.hotspots.map(hotspot => hotspot.name),
     }));
-
-    //en delete prisma decideix llençar error si no troba res, per això no cal fer la comprovació
+    //borro el tour
+    const deletedTour = await prisma.tour.delete({
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
+    });
+    // prisma llença error si no el troba, per això no cal fer la comprovació.
     res.status(200).json({ ok: true, deletedTour, deletedScenesAndHotspots });
-
 }));
 
 export default apiRouter;

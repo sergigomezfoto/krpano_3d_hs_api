@@ -1,130 +1,133 @@
 import { Router } from "express";
 import { prisma } from "../prisma-client.js";
 import { queryErrorHandler } from "../helpers/errorHandlers.js";
+import { isId } from "../helpers/isId.js";
 
 const apiRouter = Router();
 
 
 //GET totes les scenes a la base de dades
-apiRouter.get('/', queryErrorHandler(async (req, res) => {
+apiRouter.get('/_all_scenes/:structure?', queryErrorHandler(async (req, res) => {
+    const { structure } = req.params;
     const result = await prisma.scene.findMany({
-        select: {
-            id: true,
-            tourId: true,
-            name: true,
-            hotspots: {
-                select: { id: true, name: true }
+        include: {
+            tour:{
+                select:{id:true,name:true}
             },
-        },
-    });
-
-    res.status(200).json({ ok: true, result });
-}));
-
-//GET totes les escenes de las bbdd amb el mateix nom
-apiRouter.get('/name/:name', queryErrorHandler(async (req, res) => {
-    const { name } = req.params;
-    const result = await prisma.scene.findMany({
-        where: { name: name },
-        select: {
-            id: true,
-            tourId: true,
-            name: true,
-            hotspots: {
-                select: { id: true, name: true }
-            },
-            tour: {
-                select: { id: true, name: true }
-            },
+            hotspots: true,
         }
+        
     });
-    result.length === 0
-        ? res.status(404).json({ ok: false, message: `There are no scenes with the name: ${name}.` })
-        : res.status(200).json({ ok: true, result });
+
+    if (structure === 'schema') {
+        const schemaResult = result.map(scene => ({
+            name: scene.name,
+            tour: scene.tour.name,
+            hotspots: scene.hotspots.map(hotspot => ({
+                name: hotspot.name
+            }))
+        }));
+
+        res.status(200).json({ ok: true, result: schemaResult });
+    } else {
+        res.status(200).json({ ok: true, result });
+    }
 }));
 
 
-//GET escena per id
-apiRouter.get('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
-    const result = await prisma.scene.findUnique({
-        where: { id: Number(id) },
-        select: {
-            id: true,
-            tourId: true,
-            name: true,
-            hotspots: {
-                select: { id: true, name: true }
+apiRouter.get('/_tour_id/:identifier/:structure?', queryErrorHandler(async (req, res) => {
+    const { identifier,structure } = req.params;
+    const queryIsId = isId(identifier); // és id?
+
+    const result = await prisma.scene.findMany({
+        where: queryIsId ? { tourId: Number(identifier) } : { tour: { name: identifier } },
+        include: {
+            tour:{
+                select:{id:true,name:true}
             },
-            tour: {
-                select: { id: true, name: true }
-            },
+            hotspots: true,
         }
     });
 
-    result !== null
-        ? res.status(200).json({ ok: true, result })
-        : (() => { throw new Error(`[custom error] Tour with id ${id} not found`); })();
+    if (result.length === 0) {
+        const errorMessage = queryIsId
+            ? `Scene belonging to tour id: ${identifier} not found`
+            : `Scene belonging to tour ${identifier} not found`;
 
+        throw new Error(errorMessage);
+    }
+
+    if (structure === 'schema') {
+        const schemaResult = result.map(scene => ({
+            name: scene.name,
+            tour: scene.tour.name,
+            hotspots: scene.hotspots.map(hotspot => ({
+                name: hotspot.name
+            }))
+        }));
+
+        res.status(200).json({ ok: true, result: schemaResult });
+    } else {
+        res.status(200).json({ ok: true, result });
+    }
 }));
 
 
-//GET totes les scenes d'un tour per tour id
-apiRouter.get('/tourid/:tourid', queryErrorHandler(async (req, res) => {
-    const { tourid } = req.params;
+apiRouter.get('/:identifier/:structure?', queryErrorHandler(async (req, res) => {
+    const { identifier, structure } = req.params;
+    const queryIsId = isId(identifier); // és id?
+
     const result = await prisma.scene.findMany({
-        where: { tourId: Number(tourid) },
-        select: {
-            id: true,
-            tourId: true,
-            name: true,
-            hotspots: {
-                select: { id: true, name: true }
+        where: queryIsId ? { id: Number(identifier) } : { name: identifier },
+        include: {
+            tour:{
+                select:{id:true,name:true}
             },
-        },
+            hotspots: true,
+        }
     });
 
-    result.length === 0
-        ? res.status(404).json({ ok: false, message: `Scene belonging to tour id: ${tourid} not found` })
-        : res.status(200).json({ ok: true, result });
+    if (result.length === 0) {
+        const errorMessage = queryIsId
+            ? `Scene with ID ${identifier} not found`
+            : `There are no scenes with the name: ${identifier}.`;
+
+        throw new Error(errorMessage);
+    }
+
+    if (structure === 'schema') {
+        const schemaResult = result.map(scene => ({
+            name: scene.name,
+            tour: scene.tour.name,
+            hotspots: scene.hotspots.map(hotspot => ({
+                name: hotspot.name
+            }))
+        }));
+
+        res.status(200).json({ ok: true, result: schemaResult });
+    } else {
+        res.status(200).json({ ok: true, result });
+    }
 }));
 
-//GET totes les scenes d'un tour per tour name
-apiRouter.get('/tourname/:tourname', queryErrorHandler(async (req, res) => {
-    const { tourname } = req.params;
-    const result = await prisma.scene.findMany({
-        where: {
-            tour:
-                { name: tourname }
-        },
-        select: {
-            id: true,
-            tourId: true,
-            name: true,
-            hotspots: {
-                select: { id: true, name: true }
-            },
-        },
-    });
-    result.length === 0
-        ? res.status(404).json({ ok: false, message: `Scene belonging to tour ${tourname} not found` })
-        : res.status(200).json({ ok: true, result });
-}));
+
 
 
 // PUT scene per ID
-apiRouter.put('/:id', queryErrorHandler(async (req, res) => {
-    const { id } = req.params;
+apiRouter.put('/:identifier', queryErrorHandler(async (req, res) => {
+    const { identifier } = req.params;
     const { name, tourId } = req.body;
+    const queryIsId = /^\d+$/.test(identifier); // Comprobar si el identificador es un ID numérico
 
+    const where = queryIsId ? { id: Number(identifier) } : { name: identifier };
     const existingScene = await prisma.scene.findUnique({
-        where: { id: Number(id) },
+        where,
         select: { tourId: true },
     });
-    const updatedTourId = tourId || existingScene.tourId;
+    const updatedTourId = tourId || existingScene?.tourId;
 
-    const uptdatedScene = await prisma.scene.update({
-        where: { id: Number(id) },
+    const updatedScene = await prisma.scene.update({
+        where,
         data: {
             name,
             tourId: Number(updatedTourId),
@@ -139,9 +142,8 @@ apiRouter.put('/:id', queryErrorHandler(async (req, res) => {
         },
     });
 
-    res.status(200).json({ ok: true, uptdatedScene });
+    res.status(200).json({ ok: true, updatedScene });
 }));
-
 //POST una scene
 apiRouter.post('/', queryErrorHandler(async (req, res) => {
     const { tourId, ...restData } = req.body;

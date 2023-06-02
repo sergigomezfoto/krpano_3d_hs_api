@@ -11,8 +11,8 @@ const main = async () => {
 
     const createdTours = await prisma.tour.createMany({
         data: [
-            { name: `tour_1_${name1}` },
-            { name: `tour_2_${name2}` },
+            { name: `tour_${name1}` },
+            { name: `tour_${name2}` },
         ]
     });
     console.log("Tours created: ", createdTours);
@@ -24,9 +24,9 @@ const main = async () => {
     const createdScenes = [];
 
     for (const sceneData of [
-        { name: `tour_${name1}_scene_1`, tourId: tours[0].id },
-        { name: `tour_${name1}_scene_2`, tourId: tours[0].id },
-        { name: `tour_${name2}_scene_1`, tourId: tours[1].id },
+        { name: `scene_1`, tourId: tours[tours.length - 2].id },
+        { name: `scene_2`, tourId: tours[tours.length - 2].id },
+        { name: `scene_1`, tourId: tours[tours.length - 1].id },
     ]) {
         const createdScene = await prisma.scene.create({
             data: sceneData,
@@ -52,7 +52,7 @@ const main = async () => {
         const numHotspots = Math.floor(Math.random() * 3) + 1; // 1-3(aleatori) hotspots
 
         for (let i = 0; i < numHotspots; i++) {
-            const hotspotName = `${scene.name}_hs_${i + 1}`;
+            const hotspotName = `hs_${randomToken(6)}`;
             const tx = (Math.random() * 4000) - 2000;
             const ty = (Math.random() * 4000) - 2000;
             const tz = (Math.random() * 4000) - 2000;
