@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-const main = async (): Promise<void> => {
+const main = async ()=> {
     // Esborra tots els registres de totes les taules
     await prisma.hotspot.deleteMany();
     await prisma.scene.deleteMany();

@@ -22,7 +22,7 @@ model Tour {
 model Scene {
   id        Int       @id @default(autoincrement())
   name      String
-  tour      Tour      @relation(fields: [tourId], references: [id])
+  tour      Tour      @relation(fields: [tourId], references: [id], onDelete: Cascade)
   tourId    Int
   hotspots  Hotspot[]
   createdAt DateTime  @default(now()) @map("created_at")
@@ -34,7 +34,7 @@ model Scene {
 model Hotspot {
   id          Int      @id @default(autoincrement())
   name        String
-  scene       Scene    @relation(fields: [sceneId], references: [id])
+  scene       Scene    @relation(fields: [sceneId], references: [id],onDelete: Cascade)
   sceneId     Int
   transform   Json     // tx, ty, tz, rx, ry, rz, scale
   style       String?  // o style o extraData han d'estar omplerts però ho he de validar a la aplicació, no al model.

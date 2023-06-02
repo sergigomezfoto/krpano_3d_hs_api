@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
 
-    "dev": "nodemon src/server.ts"
+    "dev": "nodemon src/server.ts",
+    "deldb": "ts-node-esm src/db_seed/deleteall.ts",
+    "delseed": "ts-node-esm src/db_seed/deleteall.ts && ts-node-esm src/db_seed/seed.ts"
 
   },
   "keywords": [],
@@ -27,6 +29,6 @@
     "typescript": "^5.0.4"
   },
   "prisma": {
-    "seed": "ts-node-esm src/seed.ts"
+    "seed": "ts-node-esm src/db_seed/seed.ts"
   }
 }
